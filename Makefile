@@ -75,11 +75,15 @@ LFLAGS = -Ttext $(TEXTADDR) -Bstatic -melf32ppclinux --gc-sections
 
 # Libraries
 #
-E2FSLIB = e2fsprogs/build/lib/libext2fs.a
+LLIBS = -lext2fs -lcom_err \
+        `$(CC) -m32 -print-file-name=libpthread.a`
 
 # For compiling userland utils
 #
-UCFLAGS = -Os $(CFLAGS) -Wall -I/usr/include
+UCFLAGS = -Os -g $(CFLAGS) -Wall -I/usr/include
+UCFLAGS += -fstack-protector-strong
+UCFLAGS += -D_FORTIFY_SOURCE=2
+UCFLAGS += -Wl,-z,relro
 UCFLAGS += -Werror -fdiagnostics-show-option
 
 # For compiling build-tools that run on the host.
@@ -204,7 +208,7 @@ strip: all
 	strip util/addnote
 	strip --remove-section=.comment --remove-section=.note util/addnote
 
-install: all strip
+install: all 
 	install -d -o root -g root -m 0755 ${ROOT}/etc/
 	install -d -o root -g root -m 0755 ${ROOT}/${PREFIX}/sbin/
 	install -d -o root -g root -m 0755 ${ROOT}/${PREFIX}/lib
