@@ -26,12 +26,12 @@
 
 #include "ctype.h"
 
-int strtol (nptr, endptr, base)
+long strtol (nptr, endptr, base)
 const char *nptr;
 char **endptr;
 int base;
 {
-    int negative;
+    long negative;
     register unsigned int cutoff;
     register unsigned int cutlim;
     register unsigned int i;
