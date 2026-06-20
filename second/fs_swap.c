@@ -93,7 +93,9 @@ swap_open(struct boot_file_t* file, struct partition_t* part,
           /* FIXME: going past partition length */
           DEBUG_F("Looking for %s @ offset 0x%x, rc == %d, blk=0x%x\n",
                   signatures[i].magic, signatures[i].offset, rc, blk);
-
+          
+          if(rc==0) continue;
+     
           if (memcmp(&buffer[signatures[i].offset % part->blocksize],
                      signatures[i].magic, signatures[i].len) == 0) {
                free(buffer);

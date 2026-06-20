@@ -1515,7 +1515,7 @@ setup_display(void)
 				    "\" _screen-ihandle\" $find if execute else 0 then", &scrn);
      DEBUG_F("Trying to get screen ihandle, result: %d, scrn: %p\n", result, scrn);
 
-     if (scrn == 0 || scrn == PROM_INVALID_HANDLE) {
+     if (result == 0 || scrn == 0 || scrn == PROM_INVALID_HANDLE) {
 	  char type[32];
 	  /* Hrm... check to see if stdout is a display */
 	  scrn = call_prom ("instance-to-package", 1, 1, prom_stdout);
