@@ -71,7 +71,7 @@ endif
 
 # Link flags
 #
-LFLAGS = -Ttext $(TEXTADDR) -Bstatic -melf32ppclinux --gc-sections
+LFLAGS = --image-base=0 -Ttext $(TEXTADDR) -Bstatic -melf32ppclinux --gc-sections
 
 # Libraries
 #
