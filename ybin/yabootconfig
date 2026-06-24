@@ -5,6 +5,8 @@
 ## yabootconfig generates a simple /etc/yaboot.conf
 ## Copyright (C) 2001, 2002, 2003 Ethan Benson
 ##
+## Patched for Gentoo and dual boot - Mark Guertin <gerk@gentoo.org>
+##
 ## This program is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License
 ## as published by the Free Software Foundation; either version 2
@@ -262,6 +264,30 @@ cleanup()
 {
     if [ -n "$TMPCONF" ] ; then rm -f "$TMPCONF" ; fi
     return 0
+}
+
+dualboot()
+{
+       DRIVELIST=`ls -d /dev/?d?* | grep "[sh]d[abcdefghijkl]" | cut -b 6-8 | sort -u`
+
+       for i in $DRIVELIST
+       do
+               HFS=`mac-fdisk -l "/dev/$i" | grep '\<Apple_HFS\>' | grep -v "CDROM" | cut -d" " -f1`
+               for h in $HFS
+               do
+                       if [ !-x `hpmount -r $h` > /dev/null 2>&1 ] ; then
+                               if [ `hpls mach_kernel 2>/dev/null` ] ; then
+                                       [ "$QUIET" = 0 ] && echo "Found possible OS X/Darwin partition at $h"
+                                       OSX=$h
+                               fi
+                               if [ "`hpls "System Folder" 2>/dev/null`" ] ; then
+                                       [ "$QUIET" = 0 ] && echo "Found possible Mac OS partition at $h"
+                                       MACOS=$h
+                               fi
+                               hpumount $h > /dev/null 2>&1
+                       fi
+               done
+       done
 }
 
 ##########
