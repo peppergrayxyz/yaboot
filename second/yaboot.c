@@ -54,6 +54,7 @@
 #include "linux/elf.h"
 #include "bootinfo.h"
 #include "debug.h"
+#include "strtol.h"
 
 #define CONFIG_FILE_NAME	"yaboot.conf"
 #define CONFIG_FILE_MAX		0x8000		/* 32k */
@@ -270,7 +271,7 @@ void print_message_file(char *filename)
 	  defdev = boot.dev;
      p = cfg_get_strg(0, "partition");
 	  if (p) {
-	       n = simple_strtol(p, &endp, 10);
+	       n = strtol(p, &endp, 10);
 	       if (endp != p && *endp == 0)
 		    defpart = n;
 	  }
@@ -666,7 +667,7 @@ int get_params(struct boot_param_t* params)
 	       prom_printf("\n");
 	  }
 	  if (useconf && (q = cfg_get_strg(0, "timeout")) != 0 && *q != 0)
-	       timeout = simple_strtol(q, NULL, 0);
+	       timeout = strtol(q, NULL, 0);
      }
 
      /* If this is a reboot due to FW detecting CAS changes then 
@@ -794,7 +795,7 @@ int get_params(struct boot_param_t* params)
 	  defdevice = cfg_get_strg(0, "device");
 	  p = cfg_get_strg(0, "partition");
 	  if (p) {
-	       n = simple_strtol(p, &endp, 10);
+	       n = strtol(p, &endp, 10);
 	       if (endp != p && *endp == 0)
 		    defpart = n;
 	  }
@@ -811,7 +812,7 @@ int get_params(struct boot_param_t* params)
 	       if(!defdevice) defdevice=boot.dev;
 	       p = cfg_get_strg(label, "partition");
 	       if (p) {
-		    n = simple_strtol(p, &endp, 10);
+		    n = strtol(p, &endp, 10);
 		    if (endp != p && *endp == 0)
 			 defpart = n;
 	       }
@@ -907,7 +908,7 @@ int get_params(struct boot_param_t* params)
                    strcpy(boot.dev, temp+7);
                 } else if (!strncmp (temp, "partition=", 10)){
                    DEBUG_F("conf partition: %s\n", temp+10);
-                   boot.part=simple_strtol(temp+10,NULL,10);
+                   boot.part=strtol(temp+10,NULL,10);
                 } else
                    space = NULL;
 
@@ -932,7 +933,7 @@ int get_params(struct boot_param_t* params)
             useconf = load_config_file(&boot);
             if (useconf > 0){
                 if ((q = cfg_get_strg(0, "timeout")) != 0 && *q != 0)
-                   timeout = simple_strtol(q, NULL, 0);
+                   timeout = strtol(q, NULL, 0);
             } else {
                prom_printf("Restoring default values.\n");
                strcpy(boot.file,"");
@@ -1579,7 +1580,7 @@ yaboot_main(void)
      DEBUG_F("/chosen/bootpath = %s\n", bootdevice);
      if (prom_get_options("ibm,client-architecture-support-reboot",fw_nbr_reboots, FW_NBR_REBOOTSZ) == -1 )
         prom_get_options("ibm,fw-nbr-reboots",fw_nbr_reboots, FW_NBR_REBOOTSZ);
-     fw_reboot_cnt = simple_strtol(fw_nbr_reboots,&endp,10);
+     fw_reboot_cnt = strtol(fw_nbr_reboots,&endp,10);
      if (fw_reboot_cnt > 0L)
           prom_get_options("boot-last-label", bootlastlabel, BOOTLASTSZ);
 

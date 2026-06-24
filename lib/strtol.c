@@ -24,15 +24,21 @@
    If ENDPTR is not NULL, a pointer to the character after the last
    one converted is stored in *ENDPTR.  */
 
+#include <limits.h>
+#include "strtol.h"
 #include "ctype.h"
 #include "types.h"
 
-long strtol (const char *nptr, char **endptr, int base)
+unsigned long long strtox (
+    const char *nptr,
+    char **endptr,
+    int base,
+    unsigned long long lim)
 {
     long negative;
-    register unsigned int cutoff;
-    register unsigned int cutlim;
-    register unsigned int i;
+    register unsigned long long cutoff;
+    register unsigned long long cutlim;
+    register unsigned long long i;
     register const char *s;
     register unsigned char c;
     const char *save, *end;
@@ -79,8 +85,8 @@ long strtol (const char *nptr, char **endptr, int base)
 
     end = 0;
 
-    cutoff = 0x7FFFFFFF / (unsigned int) base;
-    cutlim = 0x7FFFFFFF % (unsigned int) base;
+    cutoff = lim / (unsigned int) base;
+    cutlim = lim % (unsigned int) base;
 
     overflow = 0;
     i = 0;
@@ -116,7 +122,7 @@ long strtol (const char *nptr, char **endptr, int base)
 	*endptr = (char *) s;
 
     if (overflow)
-	return negative ? (int) 0x80000000 : (int) 0x7FFFFFFF;
+	return negative ? 0ULL - lim - 1ULL : lim;
 
     /* Return the result of the appropriate sign.  */
     return (negative ? -i : i);
@@ -134,7 +140,29 @@ long strtol (const char *nptr, char **endptr, int base)
 	    *endptr = (char *) nptr;
     }
 
-    return 0L;
+    return 0ULL;
 }
 
-strong_alias(strtol, __isoc23_strtoul)
+/* musl/stdlib/strtol.c - MIT */
+
+unsigned long long strtoull(const char *restrict s, char **restrict p, int base) {
+    return strtox(s, p, base, ULLONG_MAX);
+}
+
+long long strtoll(const char *restrict s, char **restrict p, int base) {
+    return strtox(s, p, base, LLONG_MIN);
+}
+
+unsigned long strtoul(const char *restrict s, char **restrict p, int base) {
+    return strtox(s, p, base, ULONG_MAX);
+}
+
+long strtol(const char *restrict s, char **restrict p, int base) {
+    return strtox(s, p, base, 0UL+LONG_MIN);
+}
+
+strong_alias(strtoull, __isoc23_strtoull)
+strong_alias(strtoll, __isoc23_strtoll)
+strong_alias(strtoul, __isoc23_strtoul)
+strong_alias(strtol, __isoc23_strtol)
+

@@ -35,6 +35,7 @@
 #include "fs.h"
 #include "errors.h"
 #include "debug.h"
+#include "strtol.h"
 
 extern char bootdevice[];
 
@@ -537,7 +538,7 @@ parse_device_path(char *imagepath, char *defdevice, int defpart,
 	  *ptr = 0;
 	  result->dev = strdup(ipath);
 	  if (*(ptr+1))
-	       result->part = simple_strtol(ptr+1, NULL, 10);
+	       result->part = strtol(ptr+1, NULL, 10);
      } else if (!defdev) {
 	  result->dev = strdup(ipath);
      } else if (strlen(ipath)) {
