@@ -1,5 +1,4 @@
-#! /bin/sh
-
+#!/bin/sh
 ###############################################################################
 ##
 ## ofpath: determine OpenFirmware path from unix device node
@@ -32,7 +31,6 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 PRG="${0##*/}"
 VERSION=1.0.7+debian3
 DEBUG=0
-export LC_COLLATE=C
 
 ## --version output.
 version()
@@ -860,21 +858,21 @@ else
     exit 1
 fi
 
-## check that FILE is a block device and exists.
-if [ ! -e "$device" ] ; then
-    echo 1>&2 "$PRG: $device: No such file or directory"
-    exit 1
-elif [ ! -b "$device" ] ; then
-    echo 1>&2 "$PRG: $device is not a block device"
-    exit 1
-fi
 
-## check that we are running on a GNU/Linux system, OSX/BSD does not
-## have the same /proc stuff
-if [ `uname -s` != Linux ] ; then
-    echo 1>&2 "$PRG: This utility will only work with GNU/Linux"
-    exit 1
+### Get the device from the user
+### We dereference links to support devices like /dev/cdrom1
+DEVICE=$1
+if [ -z "$DEVICE" ]; then
+	echo 1>&2 "ofpath: No device specified!"
+	exit 1
 fi
+DEVICE=$(readlink -f "$DEVICE")
+DEVICE=$(basename $DEVICE)
+if [ -z "$DEVICE" ] || [ ! -e "/dev/$DEVICE" ]; then
+	echo 1>&2 "ofpath: Invalid device: /dev/$DEVICE"
+	exit 1
+fi
+[ "$DEBUG" = 1 ] && echo "Device is: $DEVICE"
 
 ## check for ppc, i think uname -m is safe for this...
 if [ `uname -m` != ppc -a `uname -m` != ppc64 ] ; then
@@ -941,5 +939,85 @@ case "$SUBARCH" in
 	chrp || exit 1
 	;;
 esac
+if [ ! -z "$PARTITION" ] && [ "$DEBUG" = 1 ]; then
+	echo "Partition: $PARTITION"
+fi
 
-exit 0
+### Get the disk device name
+DISK_NAME="${DEVICE%%${PARTITION}}"
+[ "$DEBUG" = 1 ] && echo "Disk Name: $DISK_NAME"
+
+### Find the devspec for the controller
+DEVPATH=$(cd -P "$SYS/block/${DISK_NAME}/device" && pwd)
+if [ -z "$DEVPATH" ]; then
+	echo "Unable to determine device path!"
+	exit 1
+fi
+[ "$DEBUG" = 1 ] && echo "Devpath is: $DEVPATH"
+
+### Get the OF Path of the controller
+if [ -e  "${DEVPATH}/../../devspec" ]; then
+	### /dev/hd*
+	CONTROLLER_PATH=$(cat ${DEVPATH}/../../devspec);
+elif [ -e "${DEVPATH}/../../../devspec" ]; then
+	### /dev/sd* on kernel <3.3
+	CONTROLLER_PATH=$(cat ${DEVPATH}/../../../devspec);
+elif [ -e "${DEVPATH}/../../../../devspec" ]; then
+	### /dev/sd* on kernel 3.3+	
+	CONTROLLER_PATH=$(cat ${DEVPATH}/../../../../devspec);
+else
+	### None of the above...
+	CONTROLLER_PATH="";
+fi
+
+if [ -z "$CONTROLLER_PATH" ]; then
+	echo "Unable to determine controller path!"
+	exit 1
+fi
+[ "$DEBUG" = 1 ] && echo "Controller Path is: $CONTROLLER_PATH"
+
+### Generate the disk number and partition info
+case ${DISK_NAME} in
+	sd*|sg*|sr*)
+		DISK_NO="$(cd ${DEVPATH}/../; pwd)";
+		DISK_NO="${DISK_NO##*:}";
+		;;
+	hd*)
+		DISK_NO="$(cd ${DEVPATH}/../; pwd)";
+		DISK_NO="${DISK_NO##*ide}";
+		;;
+	*) echo "Unsupported disk type!"; exit 1 ;;
+esac
+DISK_NO="disk@${DISK_NO}:"
+[ "$DEBUG" = 1 ] && echo "Disk Number: ${DISK_NO}"
+
+### We need to get the controller port path (if it has one)
+if [ ! -d "$DEV_TREE/$CONTROLLER_PATH/disk" ] && [ ! -d "$DEV_TREE/$CONTROLLER_PATH/$DISK_NO" ]; then
+	### FIXME I don't know if every scsi device uses the host nomenclature
+	case ${DISK_NAME} in 
+		sd*|sg*|sr*)
+			PORT="$(cd ${DEVPATH}/../../; pwd)";
+			PORT="${PORT##*host}";
+			CTL_PORT="${CONTROLLER_PATH##*/}";
+			CTL_PORT="${CTL_PORT%%-root*}";
+			PORT="$CTL_PORT@$PORT"
+			[ "$DEBUG" = 1 ] && echo "Port: $PORT"
+			;;
+		*) echo "Unsupported disk type!"; exit 1 ;;
+	esac
+fi
+
+### Add the partition information if required
+if [ ! -z $PARTITION ]; then
+	DISK_NO="$DISK_NO$PARTITION"
+fi
+
+### Build the OF Path
+if [ -z "$PORT" ]; then
+	OFPATH="$CONTROLLER_PATH/$DISK_NO"
+else
+	OFPATH="$CONTROLLER_PATH/${PORT}/$DISK_NO"
+fi
+
+### Print out the ofpath
+echo $OFPATH
