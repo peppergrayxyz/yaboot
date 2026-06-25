@@ -1,9 +1,12 @@
-Yaboot  -- PowerPC GNU/Linux OpenFirmware bootloader
--------------------------------------------------------------------
+# Yaboot-NG
 
-Please read the "COPYING" file for licence informations.
+PowerPC GNU/Linux OpenFirmware bootloader
 
--------------------------------------------------------------------
+Yaboot-ng is a fork of the latest [yaboot-1.3.17](https://github.com/yaboot/yaboot/releases/tag/yaboot-1.3.17) from Oct 18, 2011.
+
+Let's keep this Grub alternative for ppc/ppc64 alive!
+
+## Yaboot
 
 Yaboot is an OpenFirmware bootloader for Open Firmware based
 machines. It is known to work on "NewWorld" class powermacs (iMac and
@@ -19,26 +22,8 @@ directory. For documentation about all the options available, see the
 man pages (bootstrap, yaboot, yaboot.conf, ybin, mkofboot, ofpath,
 yabootconfig).
 
-Mailing lists
--------------------------------------------------------------------
-The following mailing lists exist for yaboot:
 
-yaboot-users      User related questions/discussion regarding yaboot
-yaboot-devel      Technical and development discussion regarding yaboot
-
-Please see https://ozlabs.org/mailman/listinfo/LISTNAME where LISTNAME is one
-of the above named lists.
-
-http://yaboot.ozlabs.org/
-
--------------------------------------------------------------------
-Bootloader Installation Utilities  
-ybin, mkofboot, ofpath, yabootconfig
-Written by Ethan Benson <erbenson@alaska.net>
--------------------------------------------------------------------
-
-ybin (YaBoot INstaller) and mkofboot
--------------------------------------------------------------------
+### ybin (YaBoot INstaller) and mkofboot
 
 ybin is a lilo/quik style bootloader installer for PowerPC based
 machines which require a bootstrap partition rather than a traditional
@@ -82,8 +67,7 @@ created in /tmp by default but ybin will respect the $TMPDIR
 environment variable.
 
 
-ofpath
--------------------------------------------------------------------
+### ofpath
 
 The included ofpath utility can usually determine the OpenFirmware
 device path that corresponds with a unix device node in /dev/.  Ybin
@@ -98,8 +82,7 @@ IMPORTANT: ofpath will NOT work on NewWorld Powermacs if the machine
 was booted with BootX.
 
 
-yabootconfig
--------------------------------------------------------------------
+### yabootconfig
 
 Yabootconfig creates a default configuration file and then runs mkofboot to
 complete the bootloader installation. yabootconfig reads the running
@@ -109,77 +92,87 @@ CHRP bootstrap partitions (type 0x41 PReP Boot).
 
 
 
-Yaboot.conf Configuration File
--------------------------------------------------------------------
+### Yaboot.conf Configuration File
 
 yaboot.conf configuration file settings are covered in detail in `man
 yaboot.conf'. Avoid the use of spaces in the config file, except in
 comment lines or inside quotes. Here are the essential settings.
 
-
-boot=
-Example:   boot=/dev/hda2
-
+<table>
+<tr><td>
+<b>boot=</b><br />
+Example: `boot=/dev/hda2`<br />
+<br />
 This required setting defines the bootstrap partition device.  It can
 also be a regular file if you are creating a filesystem image for some
-reason. The default config file has this set to ``unconfigured'' which
+reason. The default config file has this set to `unconfigured` which
 will cause ybin to complain about you not reading the docs, it is the
 only option you should need to change for ybin to work. Be sure you
 include the partition number at the end, it should never be something
-like /dev/hda. 
+like /dev/hda.
 
+</td></tr>
+<tr><td>
 
-install= 
-Example:  install=/usr/lib/yaboot/yaboot or /usr/local/lib/yaboot/yaboot
-
+<b>install=</b><br />
+Example: `install=/usr/lib/yaboot/yaboot` or `/usr/local/lib/yaboot/yaboot`<br />
+<br />
 The full pathname to the yaboot OpenFirmware executable file. The
 default is shown above. This file will be copied to the root level of
 the bootstrap partition. Note: If you are installing an alternative
 bootloader, its filename will be changed to yaboot when it is copied
 (to match what the first stage bootloader expects to be loading).
 
+</td></tr>
+<tr><td>
 
-partition=
-Example:   partition=3
-
+<b>partition=</b><br />
+Example: `partition=3`<br />
+<br />
 The partition number on which the kernel image is located. By default,
 this partition is assumed to be on the same device from which yaboot
-was loaded. If needed, device= can be used to explicitly specify the 
+was loaded. If needed, `device=` can be used to explicitly specify the 
 device.
 
+</td></tr>
+<tr><td>
 
-image=
-Examples:  image=/vmlinux  or  image=/boot/vmlinux-2.2.19-pmac
-
+<b>image=</b><br />
+Examples:  `image=/vmlinux` or `image=/boot/vmlinux-2.2.19-pmac`<br />
+<br />
 The path to the image from the root level of the partition (remember
 that yaboot is unaware of mountpoints).  Don't forget to include the
-leading slash when specifying the image path (image=vmlinux will
+leading slash when specifying the image path (`image=vmlinux` will
 probably fail).
 
+</td></tr>
+<tr><td>
 
-root=
-Example:   root=/dev/hda3
-
+<b>root=</b><br />
+Example: `root=/dev/hda3`<br />
+<br />
 The Linux device name for the root partition. This parameter is
 passed to the kernel when it starts up to let it know where its root
-filesystem is located. Refer to the yaboot.conf man page for details
-on kernel image options such as append=, initrd=, and initrd-size=.
+filesystem is located. Refer to the `yaboot.conf` man page for details
+on kernel image options such as `append=`, `initrd=`, and `initrd-size=`.
 
+</td></tr>
+<tr><td>
 
-magicboot= (same as -m or --magicboot)
-Example:   /usr/local/lib/yaboot/ofboot 
-
+<b>magicboot=</b><i>(same as -m or --magicboot)</i><br />
+Example: `/usr/local/lib/yaboot/ofboot` <br />
+<br />
 Identifies the first stage loader. The example shown is the default. The
 ofboot script it refers to is included with and configured automatically by
-ybin from options in /etc/yaboot.conf. The magicboot= can be the full
+ybin from options in `/etc/yaboot.conf`. The `magicboot=` can be the full
 pathname to any OF CHRP script file. Since some newer OpenFirmware
-implementations appear to require a CHRP script, the magicboot= setting is
-highly recommended. If you don't include magicboot=, then yaboot itself will
-be the active bootfile.  magicboot= cannot be used on IBM CHRP.
+implementations appear to require a CHRP script, the `magicboot=` setting is
+highly recommended. If you don't include `magicboot=`, then yaboot itself will
+be the active bootfile. `magicboot=` cannot be used on IBM CHRP.
+</td></tr>
+</table>
 
-
-Boot Menu Options
--------------------------------------------------------------------
+### Boot Menu Options
 
 The following options work only if you have specified the magicboot= option.
 Each option specifies an OpenFirmware or unix device path to another
@@ -190,28 +183,18 @@ letters are typed without a shift key (the boot menu is case sensitive).
 When set to a unix device node such as /dev/hda11 then ybin will use the
 ofpath utility to determine the OpenFirmware device path.
 
-  Option       Letter  Operating System Type
-  ---------    ------  ---------------------------------------------
-  bsd=           b     NetBSD or OpenBSD root partition (you must 
-                          have the BSD ofwboot bootloader 
-                          installed at /usr/local/lib/yaboot/ofwboot)
+  | Option        | Letter | Operating System Type                                                                                                  |
+  |---------------|--------|------------------------------------------------------------------------------------------------------------------------|
+  | bsd=          |   b    | NetBSD or OpenBSD root partition (you must have the BSD ofwboot bootloader installed at /usr/local/lib/yaboot/ofwboot) |
+  | macos=        |   m    | MacOS 8.* or 9.* bootable partition                                                                                    |
+  | macosx=       |   x    | MacOS X boot partition (also see brokenosx)                                                                            |
+  | darwin=       |   d    | Darwin boot partition                                                                                                  |
+  | enablecdboot  |   c    | Boot from the CDROM drive                                                                                              |
+  | enablenetboot |   n    | Boot from the network                                                                                                  |
+  | enableofboot  |   o    | Display an OpenFirmware prompt                                                                                         |
+  | defaultos=    |        | The default OS to load (linux, bsd, macos, darwin or macosx)                                                           |
 
-  macos=         m     MacOS 8.* or 9.* bootable partition
-
-  macosx=        x     MacOS X boot partition (also see brokenosx)
-
-  darwin=        d     Darwin boot partition
-
-  enablecdboot   c     Boot from the CDROM drive
-
-  enablenetboot  n     Boot from the network
-
-  enableofboot   o     Display an OpenFirmware prompt
-
-  defaultos=           The default OS to load (linux, bsd, macos, 
-                          darwin or macosx.
-
-brokenosx
+#### brokenosx
 
 This option causes the menu entry for MacOSX to execute
 \System\Library\CoreServices\BootX from the macosx=device instead of
@@ -223,8 +206,8 @@ this option if OSX is installed on a UFS filesystem, for UFS installs
 you specify the OSX bootstrap partition which is protected against
 MacOS.
 
-delay= 
-Example:  delay=5
+**delay=**
+Example: `delay=5`
 
 The time in seconds that the first stage ofboot loader will wait for
 you to choose a letter before booting the default OS defined in
@@ -232,10 +215,9 @@ defaultos=.  If not set, the value of timeout= (converted to seconds)
 will be used.
 
 
-Colors
--------------------------------------------------------------------
+### Colors
 
-fgcolor=string
+**fgcolor=string**
 
 Specifies the foreground (text) color used by yaboot and the
 multiboot menu.  Available colors are: black, blue, light-blue, green,
@@ -243,29 +225,15 @@ light-green, cyan, light-cyan, red, light-red, purple, light- purple,
 brown, light-gray, dark-gray, yellow, and white.  The default is
 white.
 
-bgcolor=string
+**bgcolor=string**
 
 Specifies the background color used by yaboot and the multiboot
 menu.  Available colors are the same as fgcolor. The default is
 black.
 
+## License
 
-===========================================================================
+All new contributions to Yaboot-NG are licensed under the MIT.
+All prevoius code of Yaboot is licsended under the GPL.
 
-Copyright (C) 2000, 2001, 2002, 2003 Ethan Benson
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-===========================================================================
+see [COPYING](COPYING)
