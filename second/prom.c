@@ -34,8 +34,7 @@
 #include "errors.h"
 #include "debug.h"
 #include "string.h"
-
-#define READ_BLOCKS_USE_READ	1
+#include <limits.h>
 
 static int yaboot_debug;
 
@@ -47,17 +46,30 @@ static ihandle prom_mem, prom_mmu;
 static ihandle prom_chosen, prom_options;
 
 struct prom_args {
-     const char *service;
+     const char *service; /* TODO */
      int nargs;
      int nret;
-     void *args[10];
+     prom_cell_t args[10];
 };
 
-void *
-call_prom (const char *service, int nargs, int nret, ...)
+#if defined(PPC32)
+#define char_to_cell(p) (prom_cell_t)((uintptr_t) p)
+#elif defined(PPC64)
+#error TODO
+static prom_cell_t char_to_cell(unsigned char *chr)
+{
+     uintptr_t ptr = (uintptr_t) chr;
+     if(ptr < UINT32_MAX) return ptr;
+     // copy ...
+     return ptr;
+}
+#endif
+
+prom_cell_t
+call_prom (const char *service, size_t nargs, size_t nret, ...)
 {
      va_list list;
-     int i;
+     size_t i;
      struct prom_args prom_args;
 
      prom_args.service = service;
@@ -65,7 +77,7 @@ call_prom (const char *service, int nargs, int nret, ...)
      prom_args.nret = nret;
      va_start (list, nret);
      for (i = 0; i < nargs; ++i)
-	  prom_args.args[i] = va_arg(list, void *);
+	  prom_args.args[i] = va_arg(list, prom_cell_t);
      va_end(list);
      for (i = 0; i < nret; ++i)
 	  prom_args.args[i + nargs] = 0;
@@ -76,12 +88,12 @@ call_prom (const char *service, int nargs, int nret, ...)
 	  return 0;
 }
 
-void *
-call_prom_return (const char *service, int nargs, int nret, ...)
+prom_cell_t
+call_prom_return (const char *service, size_t nargs, size_t nret, ...)
 {
      va_list list;
-     int i;
-     void* result;
+     size_t i;
+     prom_cell_t result;
      struct prom_args prom_args;
 
      prom_args.service = service;
@@ -89,7 +101,7 @@ call_prom_return (const char *service, int nargs, int nret, ...)
      prom_args.nret = nret;
      va_start (list, nret);
      for (i = 0; i < nargs; ++i)
-	  prom_args.args[i] = va_arg(list, void *);
+	  prom_args.args[i] = va_arg(list, prom_cell_t);
      for (i = 0; i < nret; ++i)
 	  prom_args.args[i + nargs] = 0;
      if (prom (&prom_args) != 0)
@@ -97,7 +109,7 @@ call_prom_return (const char *service, int nargs, int nret, ...)
      if (nret > 0) {
 	  result = prom_args.args[nargs];
 	  for (i=1; i<nret; i++) {
-	       void** rp = va_arg(list, void**);
+	       prom_cell_t* rp = va_arg(list, prom_cell_t*);
 	       *rp = prom_args.args[i+nargs];
 	  }
      } else
@@ -106,8 +118,8 @@ call_prom_return (const char *service, int nargs, int nret, ...)
      return result;
 }
 
-static void *
-call_method_1 (char *method, prom_handle h, int nargs, ...)
+static prom_cell_t
+call_method_1 (const char *method, prom_handle h, int nargs, ...)
 {
      va_list list;
      int i;
@@ -116,11 +128,11 @@ call_method_1 (char *method, prom_handle h, int nargs, ...)
      prom_args.service = "call-method";
      prom_args.nargs = nargs+2;
      prom_args.nret = 2;
-     prom_args.args[0] = method;
+     prom_args.args[0] = char_to_cell(method);
      prom_args.args[1] = h;
      va_start (list, nargs);
      for (i = 0; i < nargs; ++i)
-	  prom_args.args[2+i] = va_arg(list, void *);
+	  prom_args.args[2+i] = va_arg(list, prom_cell_t);
      va_end(list);
      prom_args.args[2+nargs] = 0;
      prom_args.args[2+nargs+1] = 0;
@@ -129,70 +141,69 @@ call_method_1 (char *method, prom_handle h, int nargs, ...)
 
      if (prom_args.args[2+nargs] != 0)
      {
-	  prom_printf ("method '%s' failed %p\n", method, prom_args.args[2+nargs]);
+	  prom_printf ("method '%s' failed %d\n", method, prom_args.args[2+nargs]);
 	  return 0;
      }
      return prom_args.args[2+nargs+1];
 }
 
-
 prom_handle
-prom_finddevice (char *name)
+prom_finddevice (const char *name)
 {
      return call_prom ("finddevice", 1, 1, name);
 }
 
 prom_handle
-prom_findpackage(char *path)
+prom_findpackage(const char *path)
 {
      return call_prom ("find-package", 1, 1, path);
 }
 
-int
-prom_getprop (prom_handle pack, char *name, void *mem, int len)
+int32_t
+prom_getprop (prom_handle pack, const char *name, void *mem, uint32_t len)
 {
-     return (int)call_prom ("getprop", 4, 1, pack, name, mem, len);
+     return (int32_t)call_prom ("getprop", 4, 1, pack, name, mem, len);
 }
 
-int
+int32_t
 prom_getproplen(prom_handle pack, const char *name)
 {
-     return (int)call_prom("getproplen", 2, 1, pack, name);
+     return (int32_t)call_prom("getproplen", 2, 1, pack, name);
 }
 
-int
-prom_setprop (prom_handle pack, char *name, void *mem, int len)
+int32_t
+prom_setprop (prom_handle pack, const char *name, void *mem, uint32_t len)
 {
-     return (int)call_prom ("setprop", 4, 1, pack, name, mem, len);
+     return (int32_t)call_prom ("setprop", 4, 1, pack, name, mem, len);
 }
 
-int
-prom_get_chosen (char *name, void *mem, int len)
+int32_t
+prom_get_chosen (const char *name, void *mem, uint32_t len)
 {
      return prom_getprop (prom_chosen, name, mem, len);
 }
 
-int
-prom_get_options (char *name, void *mem, int len)
+int32_t
+prom_get_options (const char *name, void *mem, uint32_t len)
 {
-     if (prom_options == (void *)-1)
+     if (prom_options == PROM_INVALID_HANDLE)
 	  return -1;
      return prom_getprop (prom_options, name, mem, len);
 }
 
-int
-prom_set_options (char *name, void *mem, int len)
+int32_t
+prom_set_options (const char *name, void *mem, uint32_t len)
 {
-     if (prom_options == (void *)-1)
+     if (prom_options == PROM_INVALID_HANDLE)
 	  return -1;
      return prom_setprop (prom_options, name, mem, len);
 }
 
-int
-prom_get_devtype (char *device)
+int32_t
+prom_get_devtype (const char *device)
 {
      phandle    dev;
-     int        result;
+     int32_t    result;
      char       tmp[64];
 
      if (strstr(device, TOK_ISCSI))
@@ -227,7 +238,7 @@ prom_init (prom_entry pp)
      prom = pp;
 
      prom_chosen = prom_finddevice ("/chosen");
-     if (prom_chosen == (void *)-1)
+     if (prom_chosen == PROM_INVALID_HANDLE)
 	  prom_exit ();
      prom_options = prom_finddevice ("/options");
      if (prom_get_chosen ("stdout", &prom_stdout, sizeof(prom_stdout)) <= 0)
@@ -288,22 +299,22 @@ prom_init (prom_entry pp)
      DEBUG_F("OF interface initialized.\n");
 }
 
-prom_handle
-prom_open (char *spec)
+ihandle
+prom_open (const char *spec)
 {
      return call_prom ("open", 1, 1, spec, strlen(spec));
 }
 
 void
-prom_close (prom_handle file)
+prom_close (ihandle file)
 {
      call_prom ("close", 1, 0, file);
 }
 
-int
-prom_read (prom_handle file, void *buf, int n)
+static ssize_t
+prom_read32 (ihandle file, void *buf, uint32_t n)
 {
-     int result = 0;
+     ssize_t result = 0;
      int retries = 10;
 
      if (n == 0)
@@ -318,98 +329,100 @@ prom_read (prom_handle file, void *buf, int n)
      return result;
 }
 
-int
-prom_write (prom_handle file, void *buf, int n)
+ssize_t
+prom_write32 (ihandle file, void *buf, uint32_t n)
 {
-     return (int)call_prom ("write", 3, 1, file, buf, n);
+     return (ssize_t)call_prom ("write", 3, 1, file, buf, n);
 }
 
-int
-prom_seek (prom_handle file, int pos)
+typedef ssize_t (*prom_byte_processor)(ihandle file, void *buf, uint32_t n);
+
+off_t
+prom_process_bytes(prom_byte_processor bp, ihandle file, void *buf, off_t n)
 {
-     int status = (int)call_prom ("seek", 3, 1, file, 0, pos);
-     return status == 0 || status == 1;
+     void *cur = buf;
+     size_t todo  = n;
+     size_t count = 0;
+
+     do {
+          int32_t chunk, procd;
+
+          chunk = todo > INT_MAX ? INT_MAX : todo;
+          procd = bp(file, cur, chunk);
+
+          if(procd < 0) break;
+          count += procd;
+          todo  -= procd;
+          if(procd < chunk) break;
+
+     } while(todo > 0);
+
+     return count;
 }
 
-int
-prom_lseek (prom_handle file, unsigned long long pos)
+ssize_t
+prom_read (ihandle file, void *buf, off_t n)
 {
-     int status = (int)call_prom ("seek", 3, 1, file,
-				  (unsigned int)(pos >> 32), (unsigned int)(pos & 0xffffffffUL));
-     return status == 0 || status == 1;
+     return (ssize_t)prom_process_bytes (prom_read32, file, buf, n);
 }
 
-int
-prom_loadmethod (prom_handle device, void* addr)
+ssize_t
+prom_write (ihandle file, void *buf, off_t n)
 {
-     return (int)call_method_1 ("load", device, 1, addr);
+     return (ssize_t)prom_process_bytes (prom_write32, file, buf, n);
 }
 
-int
-prom_getblksize (prom_handle file)
+off_t
+prom_lseek (ihandle file, off_t pos)
 {
-     return (int)call_method_1 ("block-size", file, 0);
+     int32_t status = (int32_t)call_prom ("seek", 3, 1, file,
+				  (uint32_t)(pos >> 32), (uint32_t)(pos & 0xffffffffUL));
+
+     if(status == 0 || status == 1) return pos;
+     return -1;
 }
 
-int
-prom_readblocks (prom_handle dev, int blockNum, int blockCount, void *buffer)
+off_t prom_getfilesize(ihandle file)
 {
-#if READ_BLOCKS_USE_READ
-     int status;
-     unsigned int blksize;
+     uint32_t hi, lo;
 
-     (void) blockCount; /* FIXME */
-
-     blksize = prom_getblksize(dev);
-     if (blksize <= 1)
-	  blksize = 512;
-     status = prom_seek(dev, blockNum * blksize);
-     if (status != 1) {
-	  return 0;
-	  prom_printf("Can't seek to 0x%x\n", blockNum * blksize);
-     }
-
-     status = prom_read(dev, buffer, blockCount * blksize);
-//  prom_printf("prom_readblocks, bl: %d, cnt: %d, status: %d\n",
-//  	blockNum, blockCount, status);
-
-     return status == (off_t)(blockCount * blksize);
-#else
-     int result;
-     int retries = 10;
-
-     if (blockCount == 0)
-	  return blockCount;
-     while(--retries) {
-	  result = call_method_1 ("read-blocks", dev, 3, buffer, blockNum, blockCount);
-	  if (result != 0)
-	       break;
-	  call_prom("interpret", 1, 1, " 10 ms");
-     }
-
-     return result;
-#endif
+     int32_t status = (int32_t)call_prom_return("call-method", 2, 3, "size", file, &hi, &lo);
+     
+     if((status != 0) || (hi == ~0U && lo == ~0U)) return -1;
+     return ((unsigned long long)hi << 32) | lo;
 }
 
-int
+int32_t
+prom_loadmethod (ihandle device, prom_addr_t addr)
+{
+     return (int32_t)call_method_1 ("load", device, 1, addr);
+}
+
+int32_t
+prom_getblksize (ihandle file)
+{
+     return (int32_t)call_method_1 ("block-size", file, 0);
+}
+
+int32_t
 prom_getchar ()
 {
      char c;
-     int a;
+     int32_t a;
 
-     while ((a = (int)call_prom ("read", 3, 1, prom_stdin, &c, 1)) == 0)
+     while ((a = (int32_t)call_prom ("read", 3, 1, prom_stdin, &c, 1)) == 0)
 	  ;
      if (a == -1)
 	  prom_abort ("EOF on console\n");
      return c;
 }
 
-int
+int32_t
 prom_nbgetchar()
 {
      char ch;
 
-     return (int) call_prom("read", 3, 1, prom_stdin, &ch, 1) > 0? ch: -1;
+     return (int32_t) call_prom("read", 3, 1, prom_stdin, &ch, 1) > 0? ch: -1;
 }
 
 void
@@ -422,7 +435,7 @@ prom_putchar (char c)
 }
 
 void
-prom_puts (prom_handle file, char *s)
+prom_puts (prom_handle file, const char *s)
 {
      const char *p, *q;
 
@@ -488,7 +501,7 @@ prom_debug (const char *fmt, ...)
 }
 
 void
-prom_perror (int error, char *filename)
+prom_perror (int error, const char *filename)
 {
      if (error == FILE_ERR_EOF)
 	  prom_printf("%s: Unexpected End Of File\n", filename);
@@ -519,10 +532,10 @@ prom_perror (int error, char *filename)
 }
 
 void
-prom_readline (char *prompt, char *buf, int len)
+prom_readline (const char *prompt, char *buf, uint32_t len)
 {
-     int i = 0;
-     int c;
+     uint32_t i = 0;
+     uint32_t c;
 
      if (prompt)
 	  prom_puts (prom_stdout, prompt);
@@ -552,7 +565,8 @@ prom_readline (char *prompt, char *buf, int len)
 }
 
 #ifdef CONFIG_SET_COLORMAP
-int prom_set_color(prom_handle device, int color, int r, int g, int b)
+int32_t
+prom_set_color(prom_handle device, uint32_t color, uint32_t r, uint32_t g, uint32_t b)
 {
      return (int)call_prom( "call-method", 6, 1, "color!", device, color, b, g, r );
 }
@@ -565,7 +579,7 @@ prom_exit ()
 }
 
 void
-prom_abort (char *fmt, ...)
+prom_abort (const char *fmt, ...)
 {
      va_list ap;
      va_start (ap, fmt);
@@ -575,7 +589,7 @@ prom_abort (char *fmt, ...)
 }
 
 void
-prom_sleep (int seconds)
+prom_sleep (unsigned int seconds)
 {
      int end; /* FIXME */
      end = (prom_getms() + (seconds * 1000));
@@ -585,50 +599,50 @@ prom_sleep (int seconds)
 /* if address given is claimed look for other addresses to get the needed
  * space before giving up
  */
-void *
-prom_claim_chunk(void *virt, unsigned int size, unsigned int align)
+prom_addr_t
+prom_claim_chunk(prom_addr_t virt, prom_size_t size, prom_size_t align)
 {
      (void) align;
 
-     void *found, *addr;
-     for(addr=virt; addr <= (void*)PROM_CLAIM_MAX_ADDR;
+     prom_addr_t found, addr;
+     for(addr=virt; addr <= PROM_CLAIM_MAX_ADDR;
          addr+=(0x100000/sizeof(addr))) {
-          found = call_prom("claim", 3, 1, addr, size, 0);
-          if (found != (void *)-1) {
+          found = (prom_addr_t)  call_prom("claim", 3, 1, addr, size, 0);
+          if (found != PROM_INVALID_ADDR) {
                prom_debug("claim of 0x%x at 0x%x returned 0x%x\n", size, (int)addr, (int)found);
                return(found);
           }
      }
-     prom_printf("ERROR: claim of 0x%x in range 0x%x-0x%x failed\n", size, (int)virt, PROM_CLAIM_MAX_ADDR);
-     return((void*)-1);
+     prom_printf("ERROR: claim of 0x%x in range 0x%x-0x%x failed\n", size, (int)virt, (int)PROM_CLAIM_MAX_ADDR);
+     return PROM_INVALID_ADDR;
 }
 
 /* Start from top of memory and work down to get the needed space */
-void *
-prom_claim_chunk_top(unsigned int size, unsigned int align)
+prom_addr_t
+prom_claim_chunk_top(prom_size_t size, prom_size_t align)
 {
      (void) align;
 
-     void *found, *addr;
-     for(addr=(void*)PROM_CLAIM_MAX_ADDR; addr >= (void *)size;
+     prom_addr_t found, addr;
+     for(addr=PROM_CLAIM_MAX_ADDR; (int) addr >= size;
          addr-=(0x100000/sizeof(addr))) {
-          found = call_prom("claim", 3, 1, addr, size, 0);
-          if (found != (void *)-1) {
+          found = (prom_addr_t) call_prom("claim", 3, 1, addr, size, 0);
+          if (found != PROM_INVALID_ADDR) {
                prom_debug("claim of 0x%x at 0x%x returned 0x%x\n", size, (int)addr, (int)found);
                return(found);
           }
      }
-     prom_printf("ERROR: claim of 0x%x in range 0x0-0x%x failed\n", size, PROM_CLAIM_MAX_ADDR);
-     return((void*)-1);
+     prom_printf("ERROR: claim of 0x%x in range 0x0-0x%x failed\n", size, (int)PROM_CLAIM_MAX_ADDR);
+     return PROM_INVALID_ADDR;
 }
 
-void *
-prom_claim (void *virt, unsigned int size, unsigned int align)
+prom_addr_t
+prom_claim (prom_addr_t virt, prom_size_t size, prom_size_t align)
 {
-     void *ret;
+     prom_addr_t ret;
 
-     ret = call_prom ("claim", 3, 1, virt, size, align);
-     if (ret == (void *)-1)
+     ret = (prom_addr_t) call_prom ("claim", 3, 1, virt, size, align);
+     if (ret == PROM_INVALID_ADDR)
           prom_printf("ERROR: claim of 0x%x at 0x%x failed\n", size, (int)virt);
      else
           prom_debug("claim of 0x%x at 0x%x returned 0x%x\n", size, (int)virt, (int)ret);
@@ -637,16 +651,16 @@ prom_claim (void *virt, unsigned int size, unsigned int align)
 }
 
 void
-prom_release(void *virt, unsigned int size)
+prom_release(prom_addr_t virt, prom_size_t size)
 {
-     void *ret;
+     prom_cell_t ret;
 
      ret = call_prom ("release", 2, 0, virt, size);
      prom_debug("release of 0x%x at 0x%x returned 0x%x\n", size, (int)virt, (int)ret);
 }
 
 void
-prom_map (void *phys, void *virt, int size)
+prom_map (prom_addr_t phys, prom_addr_t virt, prom_size_t size)
 {
      unsigned long msr = mfmsr();
 
@@ -656,7 +670,7 @@ prom_map (void *phys, void *virt, int size)
 }
 
 void
-prom_unmap (void *phys, void *virt, int size)
+prom_unmap (void *phys, void *virt, uint32_t size)
 {
      unsigned long msr = mfmsr();
 
@@ -677,22 +691,23 @@ prom_getargs ()
 }
 
 void
-prom_setargs (char *args)
+prom_setargs (const char *args)
 {
      int l = strlen (args)+1;
      if ((int)call_prom ("setprop", 4, 1, prom_chosen, "bootargs", args, l) != l)
 	  prom_printf ("can't set args\n");
 }
 
-int prom_interpret (char *forth)
+int32_t 
+prom_interpret (const char *forth)
 {
-     return (int)call_prom("interpret", 1, 1, forth);
+     return (int32_t)call_prom("interpret", 1, 1, forth);
 }
 
-int
+int32_t
 prom_getms(void)
 {
-     return (int) call_prom("milliseconds", 0, 1);
+     return (int32_t) call_prom("milliseconds", 0, 1);
 }
 
 void

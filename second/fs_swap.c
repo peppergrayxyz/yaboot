@@ -70,8 +70,8 @@ swap_open(struct boot_file_t* file, struct partition_t* part,
 	  strcat(device_name, ":0");
 
      DEBUG_F("Opening device: %s\n", device_name);
-     file->of_device = prom_open(device_name);
-     if (file->of_device == NULL) {
+     file->of_device = open(device_name, O_RDONLY);
+     if (file->of_device <= 0) {
           DEBUG_LEAVE(FILE_IOERR);
           return FILE_IOERR;
      }
@@ -88,13 +88,13 @@ swap_open(struct boot_file_t* file, struct partition_t* part,
      for(i=0; i< ARRAY_SIZE(signatures); i++) {
 	  int blk = part->part_start + (signatures[i].offset / part->blocksize);
           int rc __attribute__((unused));
-          rc = prom_readblocks(file->of_device, blk, BLKCOUNT, buffer);
+          rc = readblocks(file->of_device, blk, BLKCOUNT, buffer);
 
           /* FIXME: going past partition length */
           DEBUG_F("Looking for %s @ offset 0x%x, rc == %d, blk=0x%x\n",
                   signatures[i].magic, signatures[i].offset, rc, blk);
           
-          if(rc==0) continue;
+          if(rc>=0) continue;
      
           if (memcmp(&buffer[signatures[i].offset % part->blocksize],
                      signatures[i].magic, signatures[i].len) == 0) {
@@ -106,8 +106,8 @@ swap_open(struct boot_file_t* file, struct partition_t* part,
      }
 
      free(buffer);
-     prom_close(file->of_device);
-     file->of_device = NULL;
+     close(file->of_device);
+     file->of_device = 0;
 
      DEBUG_LEAVE(FILE_ERR_BAD_FSYS);
      return FILE_ERR_BAD_FSYS;

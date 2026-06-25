@@ -64,7 +64,7 @@ struct boot_file_t {
 	 */
 
 	int		device_kind;
-	ihandle		of_device;
+	int		of_device;
 	ino_t		inode;
 	loff_t		pos;
 	unsigned char*	buffer;

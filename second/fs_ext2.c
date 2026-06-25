@@ -28,6 +28,7 @@
 #include "ctype.h"
 #include "types.h"
 #include "stddef.h"
+#include "stddef.h"
 #include "file.h"
 #include "prom.h"
 #include "string.h"
@@ -41,7 +42,6 @@
 #define MAX_READ_RANGE	256
 #undef VERBOSE_DEBUG
 
-typedef int FILE;
 #include "ext2_fs.h"
 #include "ext2fs/ext2fs.h"
 
@@ -180,11 +180,11 @@ ext2_open(	struct boot_file_t*	file,
 
      DEBUG_F("<%s>\n", buffer);
 
-     file->of_device = prom_open(buffer);
+     file->of_device = open(buffer, O_RDONLY);
 
      DEBUG_F("file->of_device = %p\n", file->of_device);
 
-     if (file->of_device == PROM_INVALID_HANDLE) {
+     if (file->of_device <= 0) {
 
 	  DEBUG_F("Can't open device %p\n", file->of_device);
 	  DEBUG_LEAVE(FILE_IOERR);
@@ -269,7 +269,7 @@ bail:
 	       ext2fs_close(fs);
 	  fs = NULL;
 	  if (ofopened)
-	       prom_close(file->of_device);
+	       close(file->of_device);
 	  if (block_buffer)
 	       free(block_buffer);
 	  block_buffer = NULL;
@@ -518,8 +518,8 @@ ext2_read(	struct boot_file_t*	file,
 	       unsigned long long pos =
 		    ((unsigned long long)pblock) * (unsigned long long)bs;
 	       pos += doff;
-	       prom_lseek(file->of_device, pos);
-	       status = prom_read(file->of_device, block_buffer, bs);
+	       lseek(file->of_device, pos, SEEK_SET);
+	       status = read(file->of_device, block_buffer, bs);
 	       if (status != bs) {
 		    prom_printf("ext2: io error in read, ex: %d, got: %d\n",
 				bs, status);
@@ -563,7 +563,7 @@ ext2_close(	struct boot_file_t*	file)
 	  ext2fs_close(fs);
      fs = NULL;
 
-     prom_close(file->of_device);
+     close(file->of_device);
      DEBUG_F("ext2_close called\n");
 
      opened = 0;
@@ -644,8 +644,8 @@ static errcode_t linux_read_blk (io_channel channel, unsigned long block, int co
      }
 
      size = (count < 0) ? -count : count * (int) bs;
-     prom_lseek(cur_file->of_device, tempb);
-     if (prom_read(cur_file->of_device, data, size) != size) {
+     lseek(cur_file->of_device, tempb, SEEK_SET);
+     if (read(cur_file->of_device, data, size) != size) {
 	  DEBUG_F("\nRead error on block %ld\n", block);
 	  return EXT2_ET_SHORT_READ;
      }

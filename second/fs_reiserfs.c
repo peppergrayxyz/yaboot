@@ -91,11 +91,11 @@ reiserfs_open( struct boot_file_t *file, struct partition_t *part,
      if (_machine != _MACH_bplan)
 	  strcat(buffer, ":0");  /* 0 is full disk in (non-buggy) OF */
 
-     file->of_device = prom_open( buffer );
+     file->of_device = open( buffer, O_RDONLY );
      DEBUG_F( "Trying to open dev_name=%s; filename=%s; partition offset=%Lu\n",
 	      buffer, file_name, INFO->partition_offset );
 
-     if ( file->of_device == PROM_INVALID_HANDLE || file->of_device == NULL )
+     if ( file->of_device <= 0 )
      {
 	  DEBUG_F( "Can't open device %p\n", file->of_device );
 	  DEBUG_LEAVE(FILE_ERR_BADDEV);
@@ -107,7 +107,7 @@ reiserfs_open( struct boot_file_t *file, struct partition_t *part,
      if ( reiserfs_read_super() != 1 )
      {
 	  DEBUG_F( "Couldn't open ReiserFS @ %s/%Lu\n", buffer, INFO->partition_offset );
-	  prom_close( file->of_device );
+	  close( file->of_device );
 	  DEBUG_LEAVE(FILE_ERR_BAD_FSYS);
 	  return FILE_ERR_BAD_FSYS;
      }
@@ -117,7 +117,7 @@ reiserfs_open( struct boot_file_t *file, struct partition_t *part,
      if (reiserfs_open_file(buffer) == 0)
      {
 	  DEBUG_F( "reiserfs_open_file failed. errnum = %d\n", errnum );
-	  prom_close( file->of_device );
+	  close( file->of_device );
 	  DEBUG_LEAVE_F(errnum);
 	  return errnum;
      }
@@ -148,7 +148,7 @@ reiserfs_close( struct boot_file_t *file )
 {
      if( file->of_device )
      {
-	  prom_close(file->of_device);
+	  close(file->of_device);
 	  file->of_device = 0;
 	  DEBUG_F("reiserfs_close called\n");
      }
@@ -180,11 +180,11 @@ read_disk_block( struct boot_file_t *file, __u32 block, __u32 start,
      pos += (unsigned long long)INFO->partition_offset + (unsigned long long)start;
      DEBUG_F( "Reading %u bytes, starting at block %u, disk offset %Lu\n",
 	      length, block, pos );
-     if (!prom_lseek( file->of_device, pos )) {
-	  DEBUG_F("prom_lseek failed\n");
+     if (!lseek( file->of_device, pos, SEEK_SET)) {
+	  DEBUG_F("lseek failed\n");
 	  return 0;
      }
-     return prom_read( file->of_device, buf, length );
+     return read( file->of_device, buf, length );
 }
 
 

@@ -30,17 +30,21 @@
 #include "types.h"
 #include "stdarg.h"
 
-typedef void *prom_handle;
-typedef void *ihandle;
-typedef void *phandle;
+typedef int32_t     prom_cell_t;
+typedef void*       prom_addr_t;
+typedef prom_cell_t prom_size_t;
+typedef prom_cell_t prom_handle;
+typedef prom_handle ihandle;
+typedef prom_handle phandle;
 
-#define PROM_INVALID_HANDLE	((prom_handle)-1UL)
+#define PROM_INVALID_HANDLE	  ((prom_handle)-1UL)
+#define PROM_INVALID_ADDR       ((prom_addr_t) PROM_INVALID_HANDLE)
 #define BOOTDEVSZ               (2048) /* iscsi args can be in excess of 1040 bytes */
 #define TOK_ISCSI               "iscsi"
 #define TOK_IPV6                "ipv6"
-#define PROM_CLAIM_MAX_ADDR	0x10000000
-#define BOOTLASTSZ		1024
-#define FW_NBR_REBOOTSZ		4
+#define PROM_CLAIM_MAX_ADDR     ((prom_addr_t) 0x10000000)
+#define BOOTLASTSZ              1024
+#define FW_NBR_REBOOTSZ         4
 
 struct prom_args;
 typedef int (*prom_entry)(struct prom_args *);
@@ -51,83 +55,83 @@ extern prom_entry prom;
 
 /* I/O */
 
-extern prom_handle prom_stdin;
-extern prom_handle prom_stdout;
+extern ihandle prom_stdin;
+extern ihandle prom_stdout;
 
-prom_handle prom_open (char *spec);
-int prom_read (prom_handle file, void *buf, int len);
-int prom_write (prom_handle file, void *buf, int len);
-int prom_seek (prom_handle file, int pos);
-int prom_lseek (prom_handle file, unsigned long long pos);
-int prom_readblocks (prom_handle file, int blockNum, int blockCount, void *buffer);
-void prom_close (prom_handle file);
-int prom_getblksize (prom_handle file);
-int prom_loadmethod (prom_handle device, void* addr);
+ihandle prom_open (const char *spec);
+ssize_t prom_read (ihandle file, void *buf, off_t len);
+ssize_t prom_write (ihandle file, void *buf, off_t len);
+off_t prom_lseek (ihandle file, off_t pos);
+off_t prom_getfilesize(ihandle file);
+
+void prom_close (ihandle file);
+int32_t prom_getblksize (ihandle file);
+int32_t prom_loadmethod (ihandle device, prom_addr_t addr);
 
 #define K_UP    0x141
 #define K_DOWN  0x142
 #define K_LEFT  0x144
 #define K_RIGHT 0x143
 
-int prom_getchar ();
+int32_t prom_getchar ();
 void prom_putchar (char);
-int prom_nbgetchar();
+int32_t prom_nbgetchar();
 
 #ifdef __GNUC__
-void prom_vprintf (const char *fmt, va_list ap) __attribute__ ((format (printf, 1, 0)));
-void prom_vfprintf (prom_handle file, const char *fmt, va_list ap)  __attribute__ ((format (printf, 2, 0)));
-void prom_fprintf (prom_handle dev, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
+void prom_vprintf (const char *prom_set_color, va_list ap) __attribute__ ((format (printf, 1, 0)));
+void prom_vfprintf (ihandle file, const char *fmt, va_list ap)  __attribute__ ((format (printf, 2, 0)));
+void prom_fprintf (ihandle dev, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
 void prom_printf (const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 void prom_debug (const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 #else
 void prom_vprintf (const char *fmt, va_list ap);
-void prom_fprintf (prom_handle dev, const char *fmt, ...);
+void prom_fprintf (ihandle dev, const char *fmt, ...);
 void prom_printf (const char *fmt, ...);
 void prom_debug (const char *fmt, ...);
 #endif
 
-void prom_perror (int error, char *filename);
-void prom_readline (char *prompt, char *line, int len);
-int prom_set_color(prom_handle device, int color, int r, int g, int b);
+void prom_perror (int error, const char *filename);
+void prom_readline (const char *prompt, char *line, uint32_t len);
+int32_t prom_set_color(ihandle device, uint32_t color, uint32_t r, uint32_t g, uint32_t b);
 
 /* memory */
 
-void *prom_claim_chunk(void *virt, unsigned int size, unsigned int align);
-void *prom_claim_chunk_top(unsigned int size, unsigned int align);
-void *prom_claim (void *virt, unsigned int size, unsigned int align);
-void prom_release(void *virt, unsigned int size);
-void prom_map (void *phys, void *virt, int size);
+prom_addr_t prom_claim_chunk(prom_addr_t virt, prom_size_t size, prom_size_t align);
+prom_addr_t prom_claim_chunk_top(prom_size_t size, prom_size_t align);
+prom_addr_t prom_claim (prom_addr_t virt, prom_size_t size, prom_size_t align);
+void prom_release(prom_addr_t virt, prom_size_t size);
+void prom_map (prom_addr_t phys, prom_addr_t virt, prom_size_t size);
 void prom_print_available(void);
 
 /* packages and device nodes */
 
-prom_handle prom_finddevice (char *name);
-prom_handle prom_findpackage (char *path);
-int prom_getprop (prom_handle dev, char *name, void *buf, int len);
-int prom_setprop (prom_handle dev, char *name, void *buf, int len);
-int prom_getproplen(prom_handle, const char *);
-int prom_get_devtype (char *device);
+phandle prom_finddevice (const char *name);
+phandle prom_findpackage (const char *path);
+int32_t prom_getprop (phandle dev, const char *name, void *buf, uint32_t len);
+int32_t prom_setprop (phandle dev, const char *name, void *buf, uint32_t len);
+int32_t prom_getproplen(phandle, const char *);
+int32_t prom_get_devtype (const char *device);
 
 /* misc */
 
 char *prom_getargs ();
-void prom_setargs (char *args);
+void prom_setargs (const char *args);
 
 void prom_exit ();
-void prom_abort (char *fmt, ...);
-void prom_sleep (int seconds);
+void prom_abort (const char *fmt, ...);
+void prom_sleep (unsigned int seconds);
 
-int prom_interpret (char *forth);
+int32_t prom_interpret (const char *forth);
 
-int prom_get_chosen (char *name, void *mem, int len);
-int prom_get_options (char *name, void *mem, int len);
-int prom_set_options (char *name, void *mem, int len);
+int32_t prom_get_chosen (const char *name, void *mem, uint32_t len);
+int32_t prom_get_options (const char *name, void *mem, uint32_t len);
+int32_t prom_set_options (const char *name, void *mem, uint32_t len);
 
-extern int prom_getms(void);
+extern int32_t prom_getms(void);
 extern void prom_pause(void);
 
-extern void *call_prom (const char *service, int nargs, int nret, ...);
-extern void *call_prom_return (const char *service, int nargs, int nret, ...);
+extern prom_cell_t call_prom (const char *service, size_t nargs, size_t nret, ...);
+extern prom_cell_t call_prom_return (const char *service, size_t nargs, size_t nret, ...);
 
 /* Netboot stuffs */
 

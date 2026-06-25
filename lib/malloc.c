@@ -53,7 +53,7 @@ void *malloc (unsigned int size)
     if (!malloc_ptr)
     	return NULL;
     if ((malloc_ptr + size + sizeof(int)) > malloc_top) {
-	prom_printf("malloc failed\n");
+	    prom_printf("malloc failed\n");
     	return NULL;
     }
     *(int *)malloc_ptr = size;

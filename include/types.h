@@ -1,6 +1,18 @@
 #ifndef __TYPES_H
 #define __TYPES_H
 
+#include <limits.h>
+
+#if UINTPTR_MAX == UINT32_MAX 
+#define PPC32
+#define BITS_PER_LONG 32
+#elif UINTPTR_MAX == UINT64_MAX
+#define PPC64
+#define BITS_PER_LONG 64
+#else
+#error "Unsupported pointer size"
+#endif
+
 #define strong_alias(name, aliasname) \
   extern __typeof (name) aliasname __attribute__ ((alias (#name)));
 
@@ -29,10 +41,18 @@ typedef signed long long s64;
 typedef unsigned long long u64;
 
 #define _SIZE_T
-typedef unsigned int size_t;
-typedef int ssize_t;
 
-#define BITS_PER_LONG 32
+#if defined(PPC32)
+typedef __u32 size_t;
+typedef __s32 ssize_t;
+typedef __u32 uintptr_t;
+typedef __s32 intptr_t;
+#elif defined(PPC64)
+typedef __u64 size_t;
+typedef __s64 ssize_t;
+typedef __u64 uintptr_t;
+typedef __s64 intptr_t;
+#endif
 
 /* bsd */
 typedef unsigned char		u_char;

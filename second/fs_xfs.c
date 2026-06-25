@@ -83,11 +83,11 @@ xfs_open(struct boot_file_t *file,
 		strcat(buffer, ":0");  /* 0 is full disk in (non-buggy) OF */
 	DEBUG_F("Trying to open dev_name=%s; filename=%s; partition offset=%Lu\n",
 		buffer, fspec->file, partition_offset);
-	file->of_device = prom_open(buffer);
+	file->of_device = open(buffer, O_RDONLY);
 
-	if (file->of_device == PROM_INVALID_HANDLE || file->of_device == NULL)
+	if (file->of_device <= 0)
 	{
-		DEBUG_F("Can't open device %p\n", file->of_device);
+		DEBUG_F("Can't open device %lx\n", file->of_device);
 		DEBUG_LEAVE(FILE_ERR_BADDEV);
 		return FILE_ERR_BADDEV;
 	}
@@ -99,7 +99,7 @@ xfs_open(struct boot_file_t *file,
 	if (xfs_mount() != 1)
 	{
 		DEBUG_F("Couldn't open XFS @ %s/%Lu\n", buffer, partition_offset);
-		prom_close(file->of_device);
+		close(file->of_device);
 		DEBUG_LEAVE(FILE_ERR_BAD_FSYS);
 		DEBUG_SLEEP;
 		return FILE_ERR_BAD_FSYS;
@@ -110,7 +110,7 @@ xfs_open(struct boot_file_t *file,
 	if(!xfs_dir(buffer))
 	{
 		DEBUG_F("xfs_dir() failed. xfserrnum = %d\n", xfserrnum);
-		prom_close( file->of_device );
+		close( file->of_device );
 		DEBUG_LEAVE_F(xfserrnum);
 		DEBUG_SLEEP;
 		return xfserrnum;
@@ -141,7 +141,7 @@ xfs_close(struct boot_file_t *file)
 {
 	if(file->of_device)
 	{
-		prom_close(file->of_device);
+		close(file->of_device);
 		file->of_device = 0;
 		DEBUG_F("xfs_close called\n");
 	}
@@ -156,11 +156,11 @@ read_disk_block(struct boot_file_t *file, uint64_t block, int start,
 	pos += partition_offset + start;
 	DEBUG_F("Reading %d bytes, starting at block %Lu, disk offset %Lu\n",
 		length, block, pos);
-	if (!prom_lseek(file->of_device, pos)) {
-		DEBUG_F("prom_lseek failed\n");
+	if (!lseek(file->of_device, pos, SEEK_SET)) {
+		DEBUG_F("lseek failed\n");
 		return 0;
 	}
-	return prom_read(file->of_device, buf, length);
+	return read(file->of_device, buf, length);
 }
 
 #define MAX_LINK_COUNT	8

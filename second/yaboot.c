@@ -82,7 +82,7 @@ typedef struct {
 	  Elf32_Ehdr  elf32hdr;
 	  Elf64_Ehdr  elf64hdr;
      } elf;
-     void*	    base;
+     prom_addr_t     base;
      unsigned long   memsize;
      unsigned long   filesize;
      unsigned long   offset;
@@ -185,7 +185,7 @@ yaboot_start (unsigned long r3, unsigned long r4, unsigned long r5)
 
      /* Allocate some memory for malloc'ator */
      malloc_base = prom_claim_chunk_top(MALLOCSIZE, 0);
-     if (malloc_base == (void *)-1) {
+     if (malloc_base == PROM_INVALID_ADDR) {
 	  prom_printf("Can't claim malloc buffer of %d bytes\n",
 		      MALLOCSIZE);
 	  return -1;
@@ -1019,10 +1019,10 @@ void
 yaboot_text_ui(void)
 {
      struct boot_file_t	file;
-     int			result;
+     int                 result;
      static struct boot_param_t	params;
-     void		*initrd_base;
-     unsigned long	initrd_size;
+     prom_addr_t         initrd_base;
+     unsigned long       initrd_size;
      kernel_entry_t      kernel_entry;
      char*               loc=NULL;
      loadinfo_t          loadinfo;
@@ -1132,7 +1132,7 @@ yaboot_text_ui(void)
 			 len = file.fs->ino_size(&file) + 0x1000;
 
 		    initrd_base = prom_claim_chunk(loadinfo.base+loadinfo.memsize, len, 0);
-		    if (initrd_base == (void *)-1) {
+		    if (initrd_base == PROM_INVALID_ADDR) {
 			 prom_printf("Claim failed for initrd memory\n");
 			 initrd_base = 0;
 		    } else {
@@ -1286,7 +1286,7 @@ load_elf32(struct boot_file_t *file, loadinfo_t *loadinfo)
      }
 
      loadinfo->base = prom_claim_chunk((void *)loadaddr, loadinfo->memsize, 0);
-     if (loadinfo->base == (void *)-1) {
+     if (loadinfo->base == PROM_INVALID_ADDR) {
 	  prom_printf("Claim error, can't allocate kernel memory\n");
 	  goto bail;
      }
@@ -1418,7 +1418,7 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
      }
 
      loadinfo->base = prom_claim_chunk((void *)loadaddr, loadinfo->memsize, 0);
-     if (loadinfo->base == (void *)-1) {
+     if (loadinfo->base == PROM_INVALID_ADDR) {
 	  prom_printf("Claim error, can't allocate kernel memory\n");
 	  goto bail;
      }
@@ -1513,14 +1513,14 @@ setup_display(void)
 	  0xff, 0xff, 0xff
      };
      int i, result __attribute__((unused));
-     prom_handle scrn = PROM_INVALID_HANDLE;
+     prom_handle scrn = 0;
 
      /* Try Apple's mac-boot screen ihandle */
      result = (int)call_prom_return("interpret", 1, 2,
 				    "\" _screen-ihandle\" $find if execute else 0 then", &scrn);
      DEBUG_F("Trying to get screen ihandle, result: %d, scrn: %p\n", result, scrn);
 
-     if (result == 0 || scrn == 0 || scrn == PROM_INVALID_HANDLE) {
+     if (result == 0 || scrn <= 0) {
 	  char type[32];
 	  /* Hrm... check to see if stdout is a display */
 	  scrn = call_prom ("instance-to-package", 1, 1, prom_stdout);
@@ -1535,7 +1535,7 @@ setup_display(void)
 	  }
      }
 
-     if (scrn == PROM_INVALID_HANDLE) {
+     if (scrn <= 0) {
 	  prom_printf("No screen device found !\n");
 	  return;
      }

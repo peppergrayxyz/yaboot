@@ -31,6 +31,8 @@
 #include "types.h"
 #include "stddef.h"
 #include "stdlib.h"
+#include "fcntl.h"
+#include "unistd.h"
 #include "mac-part.h"
 #include "fdisk-part.h"
 #include "amiga-part.h"
@@ -109,7 +111,7 @@ partition_mac_lookup( const char *dev_name, prom_handle disk,
 	  int valid = 0;
 	  const char *ptype;
 #endif
-	  if (prom_readblocks(disk, block, 1, block_buffer) != 1) {
+	  if (readblocks(disk, block, 1, block_buffer) <= 0) {
 	       prom_printf("Can't read partition %d\n", block);
 	       break;
 	  }
@@ -205,7 +207,7 @@ identify_iso_fs(ihandle device, unsigned int *iso_root_block)
      for (block = 16; block < 100; block++) {
 	  struct iso_volume_descriptor  * vdp;
 
-	  if (prom_readblocks(device, block, 1, block_buffer) != 1) {
+	  if (readblocks(device, block, 1, block_buffer) <= 0) {
 	       prom_printf("Can't read volume desc block %d\n", block);
 	       break;
 	  }
@@ -255,7 +257,7 @@ _amiga_find_rdb (const char *dev_name, prom_handle disk, unsigned int prom_blksi
 
 	for (i = 0; i<AMIGA_RDB_MAX; i++) {
 		if (i != 0) {
-			if (prom_readblocks(disk, i, 1, block_buffer) != 1) {
+			if (readblocks(disk, i, 1, block_buffer) <= 0) {
 	  			prom_printf("Can't read boot block %d\n", i);
 	  			break;
 			}
@@ -264,7 +266,7 @@ _amiga_find_rdb (const char *dev_name, prom_handle disk, unsigned int prom_blksi
 			return 1;
 	}
 	/* Amiga partition table not found, let's reread block 0 */
-	if (prom_readblocks(disk, 0, 1, block_buffer) != 1) {
+	if (readblocks(disk, 0, 1, block_buffer) <= 0) {
   		prom_printf("Can't read boot blocks\n");
   		return 0; /* TODO: something bad happened, should fail more verbosely */
 	}
@@ -299,7 +301,7 @@ partition_amiga_lookup( const char *dev_name, prom_handle disk,
 		part != AMIGA_END;
 		part = amiga_block[AMIGA_PART_NEXT], partition++)
 	{
-		if (prom_readblocks(disk, part, 1, block_buffer) != 1) {
+		if (readblocks(disk, part, 1, block_buffer) <= 0) {
 	  		prom_printf("Can't read partition block %d\n", part);
 	  		break;
 		}
@@ -350,8 +352,8 @@ partitions_lookup(const char *device)
 	  strcat((char *)block_buffer, ":0");
 
      /* Open device */
-     disk = prom_open((char *)block_buffer);
-     if (disk == NULL) {
+     disk = open((char *)block_buffer, O_RDONLY);
+     if (disk <= 0) {
 	  prom_printf("Can't open device <%s>\n", block_buffer);
 	  goto bail;
      }
@@ -366,7 +368,7 @@ partitions_lookup(const char *device)
      }
 
      /* Read boot blocs */
-     if (prom_readblocks(disk, 0, 1, block_buffer) != 1) {
+     if (readblocks(disk, 0, 1, block_buffer) <= 0) {
 	  prom_printf("Can't read boot blocks\n");
 	  goto bail;
      }
@@ -395,7 +397,7 @@ partitions_lookup(const char *device)
      }
 
 bail:
-     prom_close(disk);
+     close(disk);
 
      return list;
 }

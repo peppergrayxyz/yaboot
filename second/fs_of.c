@@ -116,13 +116,13 @@ of_open(struct boot_file_t* file,
 
      DEBUG_F("opening: \"%s\"\n", buffer);
 
-     file->of_device = prom_open(buffer);
+     file->of_device = open(buffer, O_RDONLY);
 
      DEBUG_F("file->of_device = %p\n", file->of_device);
 
      file->pos = 0;
      file->buffer = NULL;
-     if ((file->of_device == PROM_INVALID_HANDLE) || (file->of_device == 0))
+     if (file->of_device <= 0)
      {
 	  DEBUG_LEAVE(FILE_ERR_BAD_FSYS);
 	  return FILE_ERR_BAD_FSYS;
@@ -197,12 +197,12 @@ of_net_open(struct boot_file_t* file,
 
      DEBUG_F("Opening: \"%s\"\n", buffer);
 
-     file->of_device = prom_open(buffer);
+     file->of_device = open(buffer, O_RDONLY);
 
      DEBUG_F("file->of_device = %p\n", file->of_device);
 
      file->pos = 0;
-     if ((file->of_device == PROM_INVALID_HANDLE) || (file->of_device == 0))
+     if (file->of_device <= 0)
      {
 	  DEBUG_LEAVE(FILE_ERR_BAD_FSYS);
 	  return FILE_ERR_BAD_FSYS;
@@ -210,13 +210,13 @@ of_net_open(struct boot_file_t* file,
 
 
      file->buffer = prom_claim_chunk_top(LOAD_BUFFER_SIZE, 0);
-     if (file->buffer == (void *)-1) {
+     if (file->buffer == PROM_INVALID_ADDR) {
 	  prom_printf("Can't claim memory for TFTP download\n");
-	  prom_close(file->of_device);
+	  close(file->of_device);
 	  DEBUG_LEAVE(FILE_IOERR);
 	  return FILE_IOERR;
      }
-     memset(file->buffer, 0, LOAD_BUFFER_SIZE);
+     memset((void *) file->buffer, 0, LOAD_BUFFER_SIZE);
 
      DEBUG_F("TFP...\n");
 
@@ -233,7 +233,7 @@ of_read(struct boot_file_t* file, unsigned int size, void* buffer)
 {
      unsigned int count;
 
-     count = prom_read(file->of_device, buffer, size);
+     count = read(file->of_device, buffer, size);
      file->pos += count;
      return count;
 }
@@ -245,7 +245,7 @@ of_net_read(struct boot_file_t* file, unsigned int size, void* buffer)
 
      av = file->len - file->pos;
      count = size > av ? av : size;
-     memcpy(buffer, file->buffer + file->pos, count);
+     memcpy((void *) buffer, (void *) (file->buffer + file->pos), count);
      file->pos += count;
      return count;
 }
@@ -253,7 +253,7 @@ of_net_read(struct boot_file_t* file, unsigned int size, void* buffer)
 static int
 of_seek(struct boot_file_t* file, unsigned int newpos)
 {
-     if (prom_seek(file->of_device, newpos)) {
+     if (prom_lseek(file->of_device, newpos)) {
 	  file->pos = newpos;
 	  return FILE_ERR_OK;
      }
@@ -278,7 +278,7 @@ of_close(struct boot_file_t* file)
      if (file->buffer) {
 	  prom_release(file->buffer, LOAD_BUFFER_SIZE);
      }
-     prom_close(file->of_device);
+     close(file->of_device);
      DEBUG_F("of_close called\n");
 
      DEBUG_LEAVE(0);
