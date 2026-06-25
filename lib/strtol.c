@@ -25,11 +25,9 @@
    one converted is stored in *ENDPTR.  */
 
 #include "ctype.h"
+#include "types.h"
 
-long strtol (nptr, endptr, base)
-const char *nptr;
-char **endptr;
-int base;
+long strtol (const char *nptr, char **endptr, int base)
 {
     long negative;
     register unsigned int cutoff;
@@ -138,3 +136,5 @@ int base;
 
     return 0L;
 }
+
+strong_alias(strtol, __isoc23_strtoul)

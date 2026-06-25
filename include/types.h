@@ -1,6 +1,9 @@
 #ifndef __TYPES_H
 #define __TYPES_H
 
+#define strong_alias(name, aliasname) \
+  extern __typeof (name) aliasname __attribute__ ((alias (#name)));
+
 typedef __signed__ char __s8;
 typedef unsigned char __u8;
 
@@ -24,6 +27,10 @@ typedef unsigned int u32;
 
 typedef signed long long s64;
 typedef unsigned long long u64;
+
+#define _SIZE_T
+typedef unsigned int size_t;
+typedef int ssize_t;
 
 #define BITS_PER_LONG 32
 
@@ -54,7 +61,9 @@ typedef		__u64		uint64_t;
 typedef		__u64		u_int64_t;
 typedef		__s64		int64_t;
 
-typedef unsigned int ino_t;
+typedef __u64 ino_t;
 typedef __u64 loff_t;
+typedef __s64 off_t;
+typedef __u64 dev_t;
 
 #endif

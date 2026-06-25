@@ -37,7 +37,6 @@
 #include "debug.h"
 
 extern char bootdevice[];
-int fserrorno;
 
 /* Convert __u32 into std, dotted quad string, leaks like a sive :( */
 static char *

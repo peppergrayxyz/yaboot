@@ -44,6 +44,8 @@ strncpy:
 	bdnzf	2,1b		/* dec ctr, branch if ctr != 0 && !cr0.eq */
 	blr
 
+	.globl	__strcat_chk
+__strcat_chk:
 	.globl	strcat
 strcat:
 	addi	r5,r3,-1
@@ -253,3 +255,4 @@ memcmp:
 	subf.	r3,r0,r3
 	bdnzt	2,1b
 	blr
+	

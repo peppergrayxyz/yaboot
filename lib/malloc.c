@@ -69,7 +69,7 @@ void *memset(void *s, int c, size_t n);
 void *calloc(size_t nmemb, size_t size) {
 	void *caddr;
 	caddr = malloc(nmemb * size);
-	memset(caddr, 0, nmemb * size);
+	if(caddr) memset(caddr, 0, nmemb * size);
 	return caddr;
 }
 

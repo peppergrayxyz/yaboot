@@ -220,7 +220,7 @@ ext2_open(	struct boot_file_t*	file,
 
      /* Lookup file by pathname */
      root = cwd = EXT2_ROOT_INO;
-     result = ext2fs_namei_follow(fs, root, cwd, file_name, &file->inode);
+     result = ext2fs_namei_follow(fs, root, cwd, file_name, (ext2_ino_t*) &file->inode);
      if (result) {
 
 	  DEBUG_F("ext2fs_namei error #%d while loading file %s\n", result, file_name);
